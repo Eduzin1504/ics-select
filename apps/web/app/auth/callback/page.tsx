@@ -3,6 +3,7 @@
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { setAccessToken } from '../../../lib/api/client';
+import { consumeReturnTo } from '../../../lib/auth/return-to';
 
 function AuthCallbackInner() {
   const router = useRouter();
@@ -15,7 +16,7 @@ function AuthCallbackInner() {
       return;
     }
     setAccessToken(token);
-    router.replace('/');
+    router.replace(consumeReturnTo() ?? '/');
   }, [params, router]);
 
   return (
