@@ -720,7 +720,7 @@ export const db = {
   helpers: { startOfDay, mondayOf, ymd, atDay, ago, sleep, MIN, DAY, WEEKDAY },
 };
 
-// ponytail: plugins load once at startup; restart `pnpm dev:btg` after adding one.
+// ponytail: plugins load once at startup; restart `node apps/web/btg/mock/dev.mjs` after adding one.
 const routesDir = fileURLToPath(new URL('./routes/', import.meta.url));
 const plugins = await Promise.all(
   readdirSync(routesDir)

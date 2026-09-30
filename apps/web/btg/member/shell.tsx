@@ -5,7 +5,7 @@ import { useEffect, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth/auth-context';
 import { useMeCohort } from '../../lib/queries/me-cohort';
-import { rememberReturnTo } from '../../lib/auth/return-to';
+import { BtgLogin, useBtgLogout } from '../auth';
 import { Avatar, BTG_LOGO_NAVY, Icon, Loading } from '../ui';
 
 export const BTG_MEMBER_BASE = '/btg-poc';
@@ -21,18 +21,17 @@ const NAV = [
 export function BtgMemberShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? '';
   const router = useRouter();
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading } = useAuth();
+  const logout = useBtgLogout(BTG_MEMBER_BASE);
   const { data: cohort } = useMeCohort();
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) {
-      rememberReturnTo(pathname);
-      router.replace('/login');
-    } else if (user.role === 'ADMIN') {
+    if (!user) return;
+    if (user.role === 'ADMIN') {
       router.replace('/btgadmin-poc');
     }
-  }, [isLoading, user, pathname, router]);
+  }, [isLoading, user, router]);
 
   // Same first-login rule as the classic OnboardingGate, pointed at the BTG route.
   const onboardingPath = `${BTG_MEMBER_BASE}/onboarding`;
@@ -45,6 +44,7 @@ export function BtgMemberShell({ children }: { children: ReactNode }) {
     else if (!needsOnboarding && onOnboarding) router.replace(BTG_MEMBER_BASE);
   }, [user, needsOnboarding, onOnboarding, onboardingPath, router]);
 
+  if (!isLoading && !user) return <BtgLogin area="member" />;
   if (isLoading || !user || user.role === 'ADMIN') return <Loading />;
   if (needsOnboarding && !onOnboarding) return <Loading label="Redirecionando…" />;
   if (onOnboarding) return <>{children}</>;

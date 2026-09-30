@@ -7,11 +7,19 @@ An alternative frontend for ICS Select in the BTG Pactual visual identity. It us
 
 Design reference: `docs/btg/design.md` and the "ICS Select BTG" canvas.
 
+## Isolation
+
+The skin only adds files. It changes no existing project file: no shared components, hooks, auth flow, routes, CSS or `package.json`. It reads `lib/queries`, `lib/api/client` and `lib/auth/auth-context` but never edits them.
+
+- **Sign-in:** Google OAuth runs in a popup that ends on the classic `/auth/callback`. That page writes the token to `localStorage`, and the BTG page picks it up through the `storage` event and reloads in place (`auth.tsx`).
+- **Sign-out:** calls `/auth/logout` and returns to the BTG sign-in screen.
+- **Limitation:** if the session expires, the classic auto-logout still sends the user to `/login`.
+
 ## Running locally (fully mocked)
 
 ```bash
 pnpm install
-pnpm dev:btg        # from the repo root
+node apps/web/btg/mock/dev.mjs   # from the repo root
 ```
 
 This starts a mock API on `:3999` (`mock/server.mjs`) and `next dev` on `:3000` pointed at it. You don't need a database, a Google account or an OpenAI key.
@@ -42,7 +50,7 @@ Everything BTG-specific is in this folder. Nothing outside it depends on it exce
 
 ## Removing it
 
-Delete `apps/web/btg/`, `apps/web/app/btg-poc/`, `apps/web/app/btgadmin-poc/` and `lib/auth/return-to.ts`, and revert the two lines in `app/auth/callback/page.tsx`.
+Delete `apps/web/btg/`, `apps/web/app/btg-poc/`, `apps/web/app/btgadmin-poc/` and `docs/btg/`. The skin changes no other file in the project.
 
 ## Scope
 

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth/auth-context';
-import { rememberReturnTo } from '../../lib/auth/return-to';
+import { BtgLogin, useBtgLogout } from '../auth';
 import { Avatar, BTG_LOGO_WHITE, Icon, Loading } from '../ui';
 
 export const BTG_ADMIN_BASE = '/btgadmin-poc';
@@ -24,18 +24,18 @@ const NAV = [
 export function BtgAdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? '';
   const router = useRouter();
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading } = useAuth();
+  const logout = useBtgLogout(BTG_ADMIN_BASE);
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) {
-      rememberReturnTo(pathname);
-      router.replace('/login');
-    } else if (user.role === 'MEMBER') {
+    if (!user) return;
+    if (user.role === 'MEMBER') {
       router.replace('/btg-poc');
     }
-  }, [isLoading, user, pathname, router]);
+  }, [isLoading, user, router]);
 
+  if (!isLoading && !user) return <BtgLogin area="admin" />;
   if (isLoading || !user || user.role === 'MEMBER') return <Loading />;
 
   return (

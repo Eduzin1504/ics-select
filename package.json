@@ -8,7 +8,6 @@
   },
   "scripts": {
     "dev": "turbo run dev",
-    "dev:btg": "pnpm --filter @ics-select/shared build && pnpm --filter @ics-select/web dev:btg",
     "dev:full": "./scripts/dev.sh",
     "build": "turbo run build",
     "lint": "turbo run lint",
