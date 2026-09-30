@@ -295,6 +295,7 @@ export function BtgReceipt({ cycleId }: { cycleId: string }) {
   const modeParam = sp.get('mode');
   const { data, isLoading, error } = useCycleReceipt(cycleId, asOfParam);
   const [downloading, setDownloading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(sp.toString());
@@ -348,12 +349,15 @@ export function BtgReceipt({ cycleId }: { cycleId: string }) {
     const target = document.getElementById(CAPTURE_ID);
     if (!target) return;
     setDownloading(true);
+    setExportError(null);
     try {
       const url = await toPng(target, { pixelRatio: 2, backgroundColor: '#F5F5F6' });
       const a = document.createElement('a');
       a.href = url;
       a.download = `ciclo-${cycleId.slice(-6)}-resumo-${asOfValue}.png`;
       a.click();
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'falha ao gerar a imagem');
     } finally {
       setDownloading(false);
     }
@@ -394,6 +398,12 @@ export function BtgReceipt({ cycleId }: { cycleId: string }) {
           </button>
         </div>
       </header>
+      {exportError && (
+        <div className="btg-notice btg-notice--bad" role="alert" style={{ margin: '16px 40px 0' }}>
+          <Icon name="error" />
+          Não foi possível gerar o PNG: {exportError}.
+        </div>
+      )}
       <main className="btg-ac-main">{mode === 'wrapped' ? <Retrospective data={data} /> : <Statement data={data} />}</main>
     </>
   );

@@ -165,8 +165,14 @@ export function BtgCycles() {
         confirmLabel="Arquivar"
         busy={archive.isPending}
         onClose={() => setTarget(null)}
-        onConfirm={() => target && archive.mutate(target.id, { onSettled: () => setTarget(null) })}
+        onConfirm={() => target && archive.mutate(target.id, { onSuccess: () => setTarget(null) })}
       >
+{archive.isError && (
+          <div className="btg-notice btg-notice--bad" role="alert">
+            <Icon name="error" />
+            Não foi possível concluir: {archive.error instanceof Error ? archive.error.message : 'erro desconhecido'}.
+          </div>
+        )}
         Arquivar <strong>{target?.name}</strong>? Os membros mantêm todo o histórico, mas o ciclo deixa de aparecer como ativo.
       </Confirm>
     </>

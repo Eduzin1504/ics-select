@@ -216,13 +216,19 @@ function Invites() {
               type="button"
               className="btg-btn btg-btn--primary btg-btn--sm"
               disabled={remove.isPending}
-              onClick={() => revokeTarget && remove.mutate(revokeTarget.id, { onSettled: () => setRevokeTarget(null) })}
+              onClick={() => revokeTarget && remove.mutate(revokeTarget.id, { onSuccess: () => setRevokeTarget(null) })}
             >
               {remove.isPending ? 'Revogando…' : 'Revogar'}
             </button>
           </>
         }
       >
+        {remove.isError && (
+          <div className="btg-notice btg-notice--bad" role="alert">
+            <Icon name="error" />
+            Não foi possível concluir: {remove.error instanceof Error ? remove.error.message : 'erro desconhecido'}.
+          </div>
+        )}
         <p style={{ fontSize: 15 }}>
           Revogar o convite de <strong>{revokeTarget?.email}</strong>? Para convidar de novo, crie um novo convite.
         </p>

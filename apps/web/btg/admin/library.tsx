@@ -301,13 +301,19 @@ export function BtgLibrary() {
               className="btg-btn btg-btn--primary"
               style={{ background: 'var(--btg-stuck)' }}
               disabled={remove.isPending}
-              onClick={() => deleteTarget && remove.mutate(deleteTarget.id, { onSettled: () => setDeleteTarget(null) })}
+              onClick={() => deleteTarget && remove.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) })}
             >
               {remove.isPending ? 'Excluindo…' : 'Excluir'}
             </button>
           </>
         }
       >
+        {remove.isError && (
+          <div className="btg-notice btg-notice--bad" role="alert">
+            <Icon name="error" />
+            Não foi possível concluir: {remove.error instanceof Error ? remove.error.message : 'erro desconhecido'}.
+          </div>
+        )}
         <p style={{ fontSize: 15, lineHeight: '22px' }}>
           Você vai excluir <strong>{deleteTarget?.title}</strong>. Membros que já têm este material em planos ativos
           continuam podendo concluí-lo.

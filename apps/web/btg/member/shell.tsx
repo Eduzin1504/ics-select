@@ -23,7 +23,6 @@ export function BtgMemberShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const logout = useBtgLogout(BTG_MEMBER_BASE);
-  const { data: cohort } = useMeCohort();
 
   useEffect(() => {
     if (isLoading) return;
@@ -48,6 +47,8 @@ export function BtgMemberShell({ children }: { children: ReactNode }) {
   if (isLoading || !user || user.role === 'ADMIN') return <Loading />;
   if (needsOnboarding && !onOnboarding) return <Loading label="Redirecionando…" />;
   if (onOnboarding) return <>{children}</>;
+  // Same rule as the classic GoogleReconnectGate: no refresh token → no Calendar sync, so block until re-OAuth.
+  if (!user.googleConnected) return <BtgLogin area="member" reconnect />;
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + '/');
@@ -73,11 +74,7 @@ export function BtgMemberShell({ children }: { children: ReactNode }) {
             </nav>
           </div>
           <div className="btg-topbar-right">
-            {cohort?.cycleName && (
-              <span className="btg-mono btg-mute btg-topbar-week" style={{ fontSize: 13 }}>
-                {cohort.cycleName}
-              </span>
-            )}
+            <CycleName />
             <Link href={`${BTG_MEMBER_BASE}/configuracoes`} aria-label="Configurações" title={user.name}>
               <Avatar name={user.name} pictureUrl={user.pictureUrl} />
             </Link>
@@ -97,5 +94,16 @@ export function BtgMemberShell({ children }: { children: ReactNode }) {
         ))}
       </nav>
     </>
+  );
+}
+
+// Rendered only once signed in, so the cohort query never fires unauthenticated.
+function CycleName() {
+  const { data: cohort } = useMeCohort();
+  if (!cohort?.cycleName) return null;
+  return (
+    <span className="btg-mono btg-mute btg-topbar-week" style={{ fontSize: 13 }}>
+      {cohort.cycleName}
+    </span>
   );
 }

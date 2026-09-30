@@ -26,6 +26,7 @@ function ItemView({ item }: { item: ItemResponse }) {
   const [outcome, setOutcome] = useState<ItemOutcome>(item.outcome);
   const [reflection, setReflection] = useState(item.reflection ?? '');
   const [minutes, setMinutes] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const lib = item.libraryItem;
   const platform = platformOf(lib.url, lib.format);
@@ -34,7 +35,8 @@ function ItemView({ item }: { item: ItemResponse }) {
     (o) => o !== 'SKIPPED' || item.outcome === 'SKIPPED' || (item.skippable && item.outcome === 'PENDING'),
   );
 
-  const requiresTime = TIME_REQUIRED.has(outcome) && outcome !== item.outcome;
+  // Same as classic ItemFocus: the API requires actualMinutes for these outcomes on every save.
+  const requiresTime = TIME_REQUIRED.has(outcome);
   const parsedMinutes = /^\d+$/.test(minutes.trim()) ? Number(minutes) : null;
   const minutesValid = parsedMinutes !== null && parsedMinutes >= 1 && parsedMinutes <= 1440;
   const unchanged = outcome === item.outcome && reflection === (item.reflection ?? '');
@@ -43,16 +45,23 @@ function ItemView({ item }: { item: ItemResponse }) {
   const queue = home ? [...(home.late ?? []), ...home.today, ...home.days.flatMap((d) => d.items)] : [];
   const next = queue.find((i) => i.id !== item.id && i.outcome === 'PENDING') ?? null;
 
-  function save() {
+  async function save() {
     if (!canSave) return;
-    mutation.mutate({
-      planId: item.planId,
-      itemId: item.id,
-      outcome,
-      reflection: reflection.trim() === '' ? undefined : reflection,
-      actualMinutes: requiresTime ? parsedMinutes : null,
-    });
-    router.push(next ? `${BTG_MEMBER_BASE}/item/${next.id}` : BTG_MEMBER_BASE);
+    setSaveError(null);
+    try {
+      // Wait for the API before moving on: a failed save rolls back the
+      // optimistic cache, and the member must see it instead of a false "done".
+      await mutation.mutateAsync({
+        planId: item.planId,
+        itemId: item.id,
+        outcome,
+        reflection: reflection.trim() === '' ? undefined : reflection,
+        actualMinutes: requiresTime ? parsedMinutes : null,
+      });
+      router.push(next ? `${BTG_MEMBER_BASE}/item/${next.id}` : BTG_MEMBER_BASE);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Não foi possível salvar.');
+    }
   }
 
   return (
@@ -164,8 +173,14 @@ function ItemView({ item }: { item: ItemResponse }) {
               />
             </label>
           )}
-          <button type="button" className="btg-btn btg-btn--primary" disabled={!canSave} onClick={save}>
-            {next ? 'Salvar e ir para o próximo' : 'Salvar'}
+          {saveError && (
+            <div className="btg-notice btg-notice--bad" role="alert">
+              <Icon name="error" />
+              Não salvou: {saveError}. Seu resultado continua como estava.
+            </div>
+          )}
+          <button type="button" className="btg-btn btg-btn--primary" disabled={!canSave} onClick={() => void save()}>
+            {mutation.isPending ? 'Salvando…' : next ? 'Salvar e ir para o próximo' : 'Salvar'}
             <Icon name="arrow_forward" />
           </button>
           {outcome === 'STUCK' && (

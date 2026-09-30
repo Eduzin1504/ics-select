@@ -8,7 +8,8 @@ import '../../btg/theme/admin-meetings.css';
 import { BtgIconFont, btgFontVariables } from '../../btg/theme/fonts';
 import { BtgAdminShell } from '../../btg/admin/shell';
 
-export const metadata = { title: 'ICS Select × BTG Pactual · Admin' };
+// Pitch POC: keep BTG-branded pages out of search engines until BTG approves the co-brand.
+export const metadata = { title: 'ICS Select × BTG Pactual · Admin', robots: { index: false, follow: false } };
 
 export default function BtgAdminLayout({ children }: { children: ReactNode }) {
   return (

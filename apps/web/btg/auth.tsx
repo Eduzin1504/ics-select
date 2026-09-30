@@ -12,10 +12,11 @@ const TOKEN_KEY = 'ics_access_token'; // same key lib/api/client.ts writes
  * BTG sign-in without touching the classic auth flow: Google OAuth runs in a
  * popup that ends on the classic /auth/callback, which writes the token to
  * localStorage. This page hears that write via the `storage` event (fired in
- * other windows of the same origin), closes the popup and reloads in place,
+ * other windows of the same origin), tries to close the popup (Google's COOP
+ * can sever the handle, hence the hint in the UI) and reloads in place,
  * so the user never leaves /btg-poc or /btgadmin-poc.
  */
-export function BtgLogin({ area }: { area: 'member' | 'admin' }) {
+export function BtgLogin({ area, reconnect = false }: { area: 'member' | 'admin'; reconnect?: boolean }) {
   const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
@@ -60,14 +61,25 @@ export function BtgLogin({ area }: { area: 'member' | 'admin' }) {
           <img src={BTG_LOGO_NAVY} alt="BTG Pactual" />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span className="btg-eyebrow">{area === 'admin' ? 'Diretor Educacional' : 'Programa seletivo'}</span>
-          <h1 style={{ fontSize: 24, lineHeight: '32px' }}>Entre para continuar</h1>
-          <p className="btg-soft" style={{ fontSize: 15 }}>Use sua conta Google do Inteli. O acesso é só para quem foi convidado.</p>
+          <span className="btg-eyebrow">
+            {reconnect ? 'Reconexão necessária' : area === 'admin' ? 'Diretor Educacional' : 'Programa seletivo'}
+          </span>
+          <h1 style={{ fontSize: 24, lineHeight: '32px' }}>
+            {reconnect ? 'Reconecte sua Agenda Google' : 'Entre para continuar'}
+          </h1>
+          <p className="btg-soft" style={{ fontSize: 15 }}>
+            {reconnect
+              ? 'Entre com o Google mais uma vez para que seus blocos de estudo sejam criados e atualizados na sua agenda.'
+              : 'Use sua conta Google do Inteli. O acesso é só para quem foi convidado.'}
+          </p>
         </div>
         <button id="btg-login-btn" type="button" className="btg-btn btg-btn--primary">
           <Icon name="login" />
-          Entrar com Google
+          {reconnect ? 'Reconectar Google' : 'Entrar com Google'}
         </button>
+        <p className="btg-mute" style={{ fontSize: 13 }}>
+          O login abre numa janela separada. Depois de entrar, esta página atualiza sozinha e você pode fechar a outra janela.
+        </p>
         {blocked && (
           <div className="btg-notice btg-notice--bad">
             <Icon name="error" />
