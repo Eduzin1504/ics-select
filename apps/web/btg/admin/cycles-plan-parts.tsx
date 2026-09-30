@@ -8,6 +8,8 @@ import type { PlanContextResponse } from '../../lib/queries/admin-plan-context';
 import type { SchedulingPlacement, WeeklyPlanItem } from '../../lib/queries/admin-plan-editor';
 import type { PreviewBusyBlock } from '../../lib/queries/admin-plan-preview';
 import { fuseFilter } from '../../lib/library/fuse-index';
+import { computeDayFreeMinutes } from '../../lib/scheduling/day-free';
+import { bucketBusyByLocalDay } from '../../lib/scheduling/busy-by-day';
 import { DIFFICULTY, Icon, OUTCOMES, minutesLabel, platformOf } from '../ui';
 
 // ---------- budget ----------
@@ -362,17 +364,8 @@ export function ContextCard({
 // ---------- week grid ----------
 
 const DAY_LABELS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
-const BUFFER_MINUTES = 10; // scheduler buffer between consecutive items in a slot
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
-function localMinutes(d: Date, tz: string) {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-      .formatToParts(d)
-      .map((p) => [p.type, p.value]),
-  );
-  return Number(parts.hour) * 60 + Number(parts.minute);
-}
 
 export function WeekGrid({
   weekStart,
@@ -403,6 +396,8 @@ export function WeekGrid({
   const dayOf = (iso: string) => Math.max(0, Math.min(6, Math.floor((new Date(iso).getTime() - start.getTime()) / 86_400_000)));
   const total = placements.reduce((s, p) => s + p.durationMinutes, 0);
   const now = Date.now();
+  // Busy blocks bucketed by member-local day, like the classic week preview.
+  const busyByDay = bucketBusyByLocalDay(busyBlocks, weekStart, tz);
 
   return (
     <section className="btg-card btg-card--pad" style={{ padding: '16px 20px', gap: 12 }}>
@@ -427,19 +422,21 @@ export function WeekGrid({
                 end.setHours(0, s.endMinute, 0, 0);
                 return { ...s, past: end.getTime() <= now };
               });
-            const busy = busyBlocks
-              .filter((b) => dayOf(b.start) === d && new Date(b.start) >= start)
-              .map((b) => ({ startMinute: localMinutes(new Date(b.start), tz), endMinute: localMinutes(new Date(b.end), tz) }));
+            const busy = busyByDay[d] ?? [];
             const blocks = placements.filter((p) => dayOf(p.scheduledAt) === d).sort((x, y) => x.scheduledAt.localeCompare(y.scheduledAt));
             const future = slots.filter((s) => !s.past);
             const off = cap === 0;
             const closed = off || slots.length === 0 || future.length === 0;
-            const busyIn = busy.reduce(
-              (s, b) => s + future.reduce((t, sl) => t + Math.max(0, Math.min(b.endMinute, sl.endMinute) - Math.max(b.startMinute, sl.startMinute)), 0),
-              0,
-            );
-            const used = blocks.reduce((s, p) => s + p.durationMinutes, 0);
-            const free = closed ? 0 : Math.max(0, cap - used - busyIn - (blocks.length ? BUFFER_MINUTES : 0));
+            // Same rule as the classic day card (lib/scheduling/day-free.ts).
+            const free = closed
+              ? 0
+              : computeDayFreeMinutes({
+                  capMinutes: cap,
+                  futureSlots: future,
+                  busyBlocks: busy,
+                  scheduledMinutes: blocks.reduce((s, p) => s + p.durationMinutes, 0),
+                  itemCount: blocks.length,
+                });
             const cls = ['btg-ac-day', closed ? 'btg-ac-day--off' : '', blocks.some((p) => overflowIds.has(p.itemId)) ? 'btg-ac-day--overflow' : ''].join(' ');
             return (
               <div key={label} className={cls}>
